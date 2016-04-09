@@ -25,6 +25,9 @@ from PyQt4 import QtGui, QtCore
 from PyQt4.Qt import *
 from osgeo import ogr
 import math
+from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg as NavigationToolbar
+import matplotlib.pyplot as plt
 
 # Initialize Qt resources from file resources.py
 import resources
@@ -71,6 +74,8 @@ class profileViewer:
         # TODO: We are going to let the user set this up in a future iteration
         self.toolbar = self.iface.addToolBar(u'profileViewer')
         self.toolbar.setObjectName(u'profileViewer')
+
+
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -188,14 +193,7 @@ class profileViewer:
         # show the dialog
         #self.dlg.show()
         # Run the dialog event loop
-        
-
-        self.scene = QtGui.QGraphicsScene(self.dlg)
-        self.scene.addItem(QtGui.QGraphicsLineItem(QtCore.QLineF(QPointF(-100,0),QPointF(-100,100))))
-        self.scene.addItem(QtGui.QGraphicsLineItem(QtCore.QLineF(QPointF(-100,100),QPointF(100,100))))
-        self.dlg.graphicsView.setScene(self.scene)
-
-
+       
         #Get the current selected feature
         layer = self.iface.activeLayer()
         selected_feature = layer.selectedFeatures()[0]
@@ -209,15 +207,26 @@ class profileViewer:
 
         #First Height Value
         last_point = ogr_geom_wkb.GetPoint(0)
-        last_distance = 0
-
+        distance = 0
+        plot_points = [[0,last_point[2]]]
         for i in range(1,ogr_geom_wkb.GetPointCount()):
             pt = ogr_geom_wkb.GetPoint(i)
             #We had better be in EPSG:27700
-            distance = last_distance + math.sqrt((pt[0] - last_point[0])**2 + (pt[1] - last_point[1])**2)
-            self.scene.addItem(QtGui.QGraphicsLineItem(QtCore.QLineF(QPointF(last_distance-100,100 - last_point[2]),QPointF(distance - 100 ,100 - pt[2]))))
-            last_distance = distance
+            #distance = distance + math.sqrt((pt[0] - last_point[0])**2 + (pt[1] - last_point[1])**2)
+            distance = distance + 20
+            plot_points.append([distance,pt[2]])
         
+
+        self.scene = QtGui.QGraphicsScene(self.dlg)
+        figure =  plt.figure()
+        axes   =  figure.add_subplot(111)
+        axes.hold(False)
+        axes.set_title("Dodgy Elevation Graph")
+        axes.plot(*zip(*plot_points))
+        canvas = FigureCanvas(figure)
+        self.scene.addWidget(canvas)
+        self.dlg.graphicsView.setScene(self.scene)
+
         self.dlg.show()
         result = self.dlg.exec_()
 
