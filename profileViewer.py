@@ -28,6 +28,8 @@ import math
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg as NavigationToolbar
 import matplotlib.pyplot as plt
+import numpy as np
+from scipy.interpolate import spline
 
 # Initialize Qt resources from file resources.py
 import resources
@@ -208,21 +210,31 @@ class profileViewer:
         #First Height Value
         last_point = ogr_geom_wkb.GetPoint(0)
         distance = 0
-        plot_points = [[0,last_point[2]]]
+        plot_x = [0]
+        plot_y = [last_point[2]]
         for i in range(1,ogr_geom_wkb.GetPointCount()):
             pt = ogr_geom_wkb.GetPoint(i)
             #We had better be in EPSG:27700
             #distance = distance + math.sqrt((pt[0] - last_point[0])**2 + (pt[1] - last_point[1])**2)
             distance = distance + 20
-            plot_points.append([distance,pt[2]])
-        
+            #plot_points.append([distance,pt[2]])
+            plot_x.append(distance)
+            plot_y.append(pt[2])
 
         self.scene = QtGui.QGraphicsScene(self.dlg)
         figure =  plt.figure()
-        axes   =  figure.add_subplot(111)
-        axes.hold(False)
-        axes.set_title("Dodgy Elevation Graph")
-        axes.plot(*zip(*plot_points))
+        ax   =  figure.add_subplot(111)
+        ax.hold(False)
+        ax.set_title("Dodgy Elevation Graph")
+
+
+        x_sm = np.array(plot_x)
+        y_sm = np.array(plot_y)
+        x_smooth = np.linspace(x_sm.min(), x_sm.max(), 400)
+        y_smooth = spline(plot_x, plot_y, x_smooth)
+
+        ax.plot(plot_x,plot_y,'*',x_smooth, y_smooth, 'red')
+
         canvas = FigureCanvas(figure)
         self.scene.addWidget(canvas)
         self.dlg.graphicsView.setScene(self.scene)
