@@ -23,6 +23,8 @@
 from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication
 from PyQt4 import QtGui, QtCore
 from PyQt4.Qt import *
+from osgeo import ogr
+import math
 
 # Initialize Qt resources from file resources.py
 import resources
@@ -192,8 +194,33 @@ class profileViewer:
         self.scene.addItem(QtGui.QGraphicsLineItem(QtCore.QLineF(QPointF(-100,0),QPointF(-100,100))))
         self.scene.addItem(QtGui.QGraphicsLineItem(QtCore.QLineF(QPointF(-100,100),QPointF(100,100))))
         self.dlg.graphicsView.setScene(self.scene)
+
+
+        #Get the current selected feature
+        layer = self.iface.activeLayer()
+        selected_feature = layer.selectedFeatures()[0]
+        
+        #Read its geometry
+        qgisgeom = selected_feature.geometry()
+        wkb = qgisgeom.asWkb()
+        
+        #Convert to ogr
+        ogr_geom_wkb = ogr.CreateGeometryFromWkb(wkb)
+
+        #First Height Value
+        last_point = ogr_geom_wkb.GetPoint(0)
+        last_distance = 0
+
+        for i in range(1,ogr_geom_wkb.GetPointCount()):
+            pt = ogr_geom_wkb.GetPoint(i)
+            #We had better be in EPSG:27700
+            distance = last_distance + math.sqrt((pt[0] - last_point[0])**2 + (pt[1] - last_point[1])**2)
+            self.scene.addItem(QtGui.QGraphicsLineItem(QtCore.QLineF(QPointF(last_distance-100,100 - last_point[2]),QPointF(distance - 100 ,100 - pt[2]))))
+            last_distance = distance
+        
         self.dlg.show()
         result = self.dlg.exec_()
+
         # See if OK was pressed
         if result:
            pass
