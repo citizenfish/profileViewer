@@ -1,0 +1,7 @@
+[general]
+name=lineStringGraph
+description=Line String Graph plugin
+version=1.0
+qgisMinimumVersion=3.0
+author=Dave Barter
+email=dave@nautoguide.com
